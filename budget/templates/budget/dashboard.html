@@ -1,0 +1,18 @@
+{% extends "budget/base.html" %}
+{% block content %}
+<h1>{{ household.name }} Budget Dashboard</h1>
+
+<h2>Budgets</h2>
+<ul>
+  {% for budget in budgets %}
+    <li>{{ budget.category.name }}: ${{ budget.monthly_amount }}</li>
+  {% endfor %}
+</ul>
+
+<h2>Recent Transactions</h2>
+<ul>
+  {% for t in transactions %}
+    <li>{{ t.date|date:"Y-m-d" }} - {{ t.member.user.first_name }} - ${{ t.amount }} ({{ t.category.name }})</li>
+  {% endfor %}
+</ul>
+{% endblock %}
