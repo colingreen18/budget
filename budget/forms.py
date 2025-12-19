@@ -29,8 +29,18 @@ class SignUpForm(forms.Form):
 
 class CategoriesForm(forms.Form):
     name = forms.CharField(max_length=100, required=True)
-    income_expense = forms.ChoiceField(choices=[('IN', 'Income'), ('EX', 'Expense')], required=True)
+    income_expense = forms.ChoiceField(
+        choices=[('EX', 'Expense'), ('IN', 'Income')],
+        widget=forms.RadioSelect,
+        initial='EX',
+        label=""
+    )
     fixed = forms.BooleanField(required=False)
     necessity = forms.BooleanField(required=False)
     monthly_amount = forms.DecimalField(max_digits=10, decimal_places=2, required=False, label="Budgeted Amount")
+    is_active = forms.BooleanField(
+    required=False,
+    initial=True,
+    label="Active")
+
 

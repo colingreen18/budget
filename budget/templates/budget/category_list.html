@@ -1,9 +1,10 @@
 {% extends "budget/base.html" %}
 
 {% block content %}
+
 <div class="category-header">
-    <h2>Income Categories</h2>
     <a href="{% url 'category_create' %}">+ Add Category</a>
+    <h2>Income Categories</h2>
 </div>
 <div class="container">
     <table>
@@ -12,6 +13,7 @@
                 <th>Name</th>
                 <th>Fixed</th>
                 <th>Necessity</th>
+                <th>Active</th>
                 <th>Budgeted Amount</th>
                 <th>Actions</th>
             </tr>
@@ -20,8 +22,9 @@
             {% for item in income_categories %}
             <tr>
                 <td>{{ item.category.name }}</td>
-                <td>{{ item.category.fixed }}</td>
-                <td>{{ item.category.necessity }}</td>
+                <td>{{ item.category.fixed|yesno:"Yes,No" }}</td>
+                <td>{{ item.category.necessity|yesno:"Yes,No" }}</td>
+                <td>{{ item.category.is_active|yesno:"Yes,No" }}</td>
                 <td>{{ item.budget|default:"-" }}</td>
                 <td><a href="{% url 'category_update' item.category.pk %}">Edit</a></td>
             </tr>
@@ -30,8 +33,9 @@
     </table>
 </div>
 
-
-<h2>Expense Categories</h2>
+<div class="category-header">
+    <h2>Expense Categories</h2>
+</div>
 <div class="container">
     <table>
         <thead>
@@ -39,6 +43,7 @@
                 <th>Name</th>
                 <th>Fixed</th>
                 <th>Necessity</th>
+                <th>Active</th>
                 <th>Budgeted Amount</th>
                 <th>Actions</th>
             </tr>
@@ -47,8 +52,9 @@
             {% for item in expense_categories %}
             <tr>
                 <td>{{ item.category.name }}</td>
-                <td>{{ item.category.fixed }}</td>
-                <td>{{ item.category.necessity }}</td>
+                <td>{{ item.category.fixed|yesno:"Yes,No" }}</td>
+                <td>{{ item.category.necessity|yesno:"Yes,No" }}</td>
+                <td>{{ item.category.is_active|yesno:"Yes,No" }}</td>
                 <td>{{ item.budget|default:"-" }}</td>
                 <td><a href="{% url 'category_update' item.category.pk %}">Edit</a></td>
             </tr>

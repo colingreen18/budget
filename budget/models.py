@@ -55,6 +55,8 @@ class Category(models.Model):
         return self.name
 
 
+
+
 class Store(models.Model):
     household = models.ForeignKey(
         Household,

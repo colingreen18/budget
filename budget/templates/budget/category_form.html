@@ -1,0 +1,15 @@
+{% extends "budget/base.html" %}
+
+{% block content %}
+<div class="container">
+    <h2>{{ action }} Category</h2>
+
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">{{ action }}</button>
+    </form>
+
+    <p><a href="{% url 'category_list' %}">Back to Categories</a></p>
+</div>
+{% endblock %}
