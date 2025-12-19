@@ -25,3 +25,12 @@ class SignUpForm(forms.Form):
         if not cleaned_data.get('household_name') and not cleaned_data.get('invite_code'):
             raise forms.ValidationError("Provide either a new household name or a valid invite code.")
         return cleaned_data
+
+
+class CategoriesForm(forms.Form):
+    name = forms.CharField(max_length=100, required=True)
+    income_expense = forms.ChoiceField(choices=[('IN', 'Income'), ('EX', 'Expense')], required=True)
+    fixed = forms.BooleanField(required=False)
+    necessity = forms.BooleanField(required=False)
+    monthly_amount = forms.DecimalField(max_digits=10, decimal_places=2, required=False, label="Budgeted Amount")
+

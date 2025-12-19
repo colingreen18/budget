@@ -15,3 +15,33 @@ body {
     box-shadow: 0 4px 10px rgba(0,0,0,0.1);
 }
 
+table {
+    border-collapse: collapse; /* remove double borders */
+    width: 100%;
+    margin-bottom: 20px;
+}
+
+th, td {
+    border: 1px solid #ccc; /* light gray lines */
+    padding: 8px;
+    text-align: left;
+}
+
+th {
+    background-color: #e0f0ff; /* optional light blue header */
+}
+
+tbody tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+.category-header {
+    display: flex;
+    flex-direction: column; /* stack vertically */
+    align-items: center;    /* center horizontally */
+    margin-bottom: 20px;
+}
+
+.category-header a {
+    margin-top: 5px; /* space between heading and link */
+}

@@ -1,0 +1,59 @@
+{% extends "budget/base.html" %}
+
+{% block content %}
+<div class="category-header">
+    <h2>Income Categories</h2>
+    <a href="{% url 'category_create' %}">+ Add Category</a>
+</div>
+<div class="container">
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Fixed</th>
+                <th>Necessity</th>
+                <th>Budgeted Amount</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in income_categories %}
+            <tr>
+                <td>{{ item.category.name }}</td>
+                <td>{{ item.category.fixed }}</td>
+                <td>{{ item.category.necessity }}</td>
+                <td>{{ item.budget|default:"-" }}</td>
+                <td><a href="{% url 'category_update' item.category.pk %}">Edit</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+
+<h2>Expense Categories</h2>
+<div class="container">
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Fixed</th>
+                <th>Necessity</th>
+                <th>Budgeted Amount</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in expense_categories %}
+            <tr>
+                <td>{{ item.category.name }}</td>
+                <td>{{ item.category.fixed }}</td>
+                <td>{{ item.category.necessity }}</td>
+                <td>{{ item.budget|default:"-" }}</td>
+                <td><a href="{% url 'category_update' item.category.pk %}">Edit</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
