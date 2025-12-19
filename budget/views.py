@@ -1,11 +1,14 @@
+from django.contrib import messages
 from django.contrib.auth.models import User
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.utils import timezone
 from django.shortcuts import render, redirect, get_object_or_404
-from .forms import SignUpForm, CategoriesForm
+from .forms import SignUpForm, CategoriesForm, TransactionForm
 from .models import FamilyMember, Household, Category, Store, Transaction, RecurringTransaction, Budget
+
+
 
 def signup_view(request):
     if request.method == 'POST':
@@ -168,3 +171,20 @@ def category_update(request, pk):
 
     return render(request, 'budget/category_form.html', {'form': form, 'action': 'Edit'})
 
+
+@login_required
+def transaction_create(request):
+    household = request.user.familymember.household
+
+    if request.method == 'POST':
+        form = TransactionForm(request.POST, household=household)
+        if form.is_valid():
+            transaction = form.save(commit=False)
+            transaction.member = request.user.familymember
+            transaction.save()
+            messages.success(request, "Transaction created successfully!")
+            return redirect('dashboard')  # or wherever you want to go
+    else:
+        form = TransactionForm(household=household)  # pass household to limit choices
+
+    return render(request, 'budget/transaction_form.html', {'form': form, 'action': 'Create'})

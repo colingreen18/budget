@@ -1,7 +1,8 @@
 from django import forms
-from .models import Household
+from .models import Household, Transaction, Category, Store
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
+from django.utils import timezone
 
 class SignUpForm(forms.Form):
     email = forms.EmailField(label="Email")
@@ -44,3 +45,27 @@ class CategoriesForm(forms.Form):
     label="Active")
 
 
+class TransactionForm(forms.ModelForm):
+    class Meta:
+        model = Transaction
+        fields = ['amount', 'category', 'store', 'date', 'description']
+        widgets = {
+            'date': forms.DateInput(attrs={'type': 'date'}),
+            'description': forms.Textarea(attrs={'rows': 2}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        household = kwargs.pop('household', None)  # pass household from view
+        super().__init__(*args, **kwargs)
+
+        if household:
+            self.fields['category'].queryset = Category.objects.filter(
+                household=household, deleted_at__isnull=True
+            )
+            self.fields['store'].queryset = Store.objects.filter(
+                household=household, deleted_at__isnull=True
+            )
+
+        # Set default date to today if not already set
+        if not self.initial.get('date'):
+            self.initial['date'] = timezone.now().date()
