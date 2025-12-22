@@ -1,0 +1,76 @@
+{% extends "budget/base.html" %}
+
+{% block content %}
+<div class="container">
+    <h2>Transactions — {{ month }}</h2>
+
+    <p>
+        <a href="{% url 'transaction_create' %}">+ Add Transaction</a>
+    </p>
+    <form method="get" class="filter-form">
+        <fieldset>
+            <legend>Filters</legend>
+    
+            <div class="filter-row">
+                <div class="filter-field">{{ filter_form.start_date.label_tag }} {{ filter_form.start_date }} {{ filter_form.end_date.label_tag }} {{ filter_form.end_date }}</div>
+            </div>
+
+            <div class="filter-field">
+                {{ filter_form.category.label_tag }}
+                {{ filter_form.category }}
+                {{ filter_form.store.label_tag }}
+                {{ filter_form.store }}
+                {{ filter_form.member.label_tag }}
+                {{ filter_form.member }}
+            </div>
+            <div class="filter-row">
+                <div class="filter-field">{{ filter_form.min_amount.label_tag }} {{ filter_form.min_amount }} {{ filter_form.max_amount.label_tag }} {{ filter_form.max_amount }}</div>
+            </div>
+    
+            <div class="filter-row">
+                <div class="filter-field full-width">{{ filter_form.description.label_tag }} {{ filter_form.description }}</div>
+            </div>
+    
+            <button type="submit">Apply Filters</button>
+            <a href="{% url 'transaction_list' %}">Clear</a>
+        </fieldset>
+    </form>    
+        
+    <table class="sortable">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Category</th>
+                <th>Store</th>
+                <th>Description</th>
+                <th>Member</th>
+                <th>Amount</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for t in transactions %}
+            <tr>
+                <td>{{ t.date|date:"Y-m-d" }}</td>
+                <td>{{ t.category.name }}</td>
+                <td>{{ t.store.name|default:"—" }}</td>
+                <td>{{ t.description }}</td>
+                <td>{{ t.member.user.first_name }}</td>
+                <td style="text-align: right;
+                    {% if t.category.income_expense == 'EX' %}color: #b00020;{% else %}color: #007a1f;{% endif %}">
+                    {% if t.category.income_expense == 'EX' %}-{% endif %}
+                    {{ t.amount }}
+                </td>
+                <td>
+                    <a href="{% url 'transaction_update' t.pk %}">Edit</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="7" style="text-align:center;">No transactions this month</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

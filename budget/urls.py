@@ -14,9 +14,13 @@ urlpatterns = [
     path('categories/<int:pk>/edit/', views.category_update, name='category_update'),
 
     # Transactions
+    path('transactions/', views.transaction_list, name='transaction_list'),
     path('transactions/add/', views.transaction_create, name='transaction_create'),
-    # Optional later: edit and list views
-    # path('transactions/<int:pk>/edit/', views.transaction_update, name='transaction_update'),
-    # path('transactions/', views.transaction_list, name='transaction_list'),
+    path('transactions/<int:pk>/edit/', views.transaction_update, name='transaction_update'),
+
+
+    # Stores
+    path('stores/', views.store_list, name='store_list'),
+    path('stores/add/', views.store_create, name='store_create'),
 ]
 

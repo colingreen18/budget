@@ -1,0 +1,15 @@
+{% extends "budget/base.html" %}
+
+{% block content %}
+<div class="container">
+    <h2>{{ action }} Store</h2>
+
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Save</button>
+    </form>
+
+    <p><a href="{% url 'store_list' %}">Back to stores</a></p>
+</div>
+{% endblock %}

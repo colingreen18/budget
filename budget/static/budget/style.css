@@ -45,3 +45,38 @@ tbody tr:nth-child(even) {
 .category-header a {
     margin-top: 5px; /* space between heading and link */
 }
+
+
+.filter-form {
+    margin-bottom: 20px;
+    padding: 15px;
+    background-color: #f4f9ff;
+    border-radius: 8px;
+}
+
+.filter-form fieldset {
+    border: none;
+}
+
+.filter-form legend {
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.filter-row {
+    display: flex;           /* make children sit horizontally */
+    gap: 20px;               /* space between fields */
+    align-items: flex-end;   /* align labels and inputs */
+    margin-bottom: 10px;
+}
+
+.filter-field {
+    display: flex;
+    flex-direction: column;  /* label on top of input */
+    flex: 1;                 /* each field takes equal width */
+}
+
+
+.filter-field.full-width {
+    flex: 2;
+}

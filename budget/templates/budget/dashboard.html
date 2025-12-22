@@ -1,18 +1,136 @@
 {% extends "budget/base.html" %}
+
 {% block content %}
-<h1>{{ household.name }} Budget Dashboard</h1>
+<div class="container">
+    <h2>Dashboard — {{ month }}</h2>
 
-<h2>Budgets</h2>
-<ul>
-  {% for budget in budgets %}
-    <li>{{ budget.category.name }}: ${{ budget.monthly_amount }}</li>
-  {% endfor %}
-</ul>
+    <!-- Links -->
+    <div class="dashboard-links">
+        <a href="{% url 'transaction_create' %}">+ Add Transaction</a> |
+        <a href="{% url 'transaction_list' %}">View Transactions</a> |
+        <a href="{% url 'category_create' %}">+ Add Category</a> |
+        <a href="{% url 'category_list' %}">View Categories</a> |
+        <a href="{% url 'store_create' %}">+ Add Store</a> |
+        <a href="{% url 'store_list' %}">View Stores</a>
+    </div>
 
-<h2>Recent Transactions</h2>
-<ul>
-  {% for t in transactions %}
-    <li>{{ t.date|date:"Y-m-d" }} - {{ t.member.user.first_name }} - ${{ t.amount }} ({{ t.category.name }})</li>
-  {% endfor %}
-</ul>
+    <hr>
+
+    <!-- Recent Transactions -->
+    <h3>Recent Transactions</h3>
+    <table class="sortable">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Description</th>
+                <th>Category</th>
+                <th>Amount</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for t in recent_transactions %}
+            <tr>
+                <td>{{ t.date|date:"Y-m-d" }}</td>
+                <td>{{ t.description }}</td>
+                <td>{{ t.category.name }}</td>
+                <td style="text-align: right;">
+                    {% if t.category.income_expense == 'EX' %}-{% endif %}
+                    {{ t.amount }}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="4" style="text-align:center;">No transactions this month</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <hr>
+
+    <!-- Budget vs Spending Bar Chart -->
+    <h3>Budget Summary</h3>
+    <form method="get" class="filter-form">
+        <fieldset>
+            <legend>Filter Date Range</legend>
+            <form id="month-select-form">
+                <label for="month-select">Select Month:</label>
+                <input type="month" id="month-select" name="month">
+            </form>
+            <div class="filter-row">
+                <div class="filter-field">
+                    {{ filter_form.start_date.label_tag }} {{ filter_form.start_date }} {{ filter_form.end_date.label_tag }} {{ filter_form.end_date }}
+                </div>
+                <div class="filter-field">
+                    <button type="submit">Apply</button>
+                </div>
+            </div>
+        </fieldset>
+    </form>
+    <canvas id="budgetChart" width="600" height="400"></canvas>
+</div>
+
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const monthSelect = document.getElementById('month-select');
+        const startInput = document.getElementById('id_start_date');
+        const endInput = document.getElementById('id_end_date');
+        const chartForm = document.getElementById('chart-filter-form'); // the chart filter form
+    
+        monthSelect.addEventListener('change', () => {
+            if (!monthSelect.value) return;
+            const [year, month] = monthSelect.value.split('-').map(Number);
+    
+            const firstDay = new Date(year, month - 1, 1);
+            const lastDay = new Date(year, month, 0); // last day of month
+    
+            startInput.value = firstDay.toISOString().split('T')[0];
+            endInput.value = lastDay.toISOString().split('T')[0];
+    
+            // Automatically submit the form
+            chartForm.submit();
+        });
+    });
+    </script>
+    
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const ctx = document.getElementById('budgetChart').getContext('2d');
+    const labels = [{% for item in summary %}'{{ item.category }}',{% endfor %}];
+    const budgets = [{% for item in summary %}{{ item.budget }},{% endfor %}];
+    const spent = [{% for item in summary %}{{ item.spent }},{% endfor %}];
+
+    const data = {
+        labels: labels,
+        datasets: [
+            {
+                label: 'Budget',
+                data: budgets,
+                backgroundColor: 'rgba(54, 162, 235, 0.5)'
+            },
+            {
+                label: 'Spent',
+                data: spent,
+                backgroundColor: 'rgba(255, 99, 132, 0.5)'
+            }
+        ]
+    };
+
+    const config = {
+        type: 'bar',
+        data: data,
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    };
+
+    new Chart(ctx, config);
+</script>
 {% endblock %}

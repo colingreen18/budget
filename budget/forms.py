@@ -1,5 +1,5 @@
 from django import forms
-from .models import Household, Transaction, Category, Store
+from .models import Household, Transaction, Category, Store, FamilyMember
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
 from django.utils import timezone
@@ -48,14 +48,14 @@ class CategoriesForm(forms.Form):
 class TransactionForm(forms.ModelForm):
     class Meta:
         model = Transaction
-        fields = ['amount', 'category', 'store', 'date', 'description']
+        fields = ['amount', 'store', 'category', 'date', 'description']
         widgets = {
             'date': forms.DateInput(attrs={'type': 'date'}),
             'description': forms.Textarea(attrs={'rows': 2}),
         }
 
     def __init__(self, *args, **kwargs):
-        household = kwargs.pop('household', None)  # pass household from view
+        household = kwargs.pop('household', None)
         super().__init__(*args, **kwargs)
 
         if household:
@@ -69,3 +69,63 @@ class TransactionForm(forms.ModelForm):
         # Set default date to today if not already set
         if not self.initial.get('date'):
             self.initial['date'] = timezone.now().date()
+        
+        self.fields['store'].widget.attrs['data-has-defaults'] = 'true'
+
+
+class TransactionFilterForm(forms.Form):
+    start_date = forms.DateField(required=False, widget=forms.DateInput(attrs={'type': 'date'}))
+    end_date = forms.DateField(required=False, widget=forms.DateInput(attrs={'type': 'date'}))
+
+    category = forms.ModelChoiceField(
+        queryset=Category.objects.none(),
+        required=False
+    )
+
+    store = forms.ModelChoiceField(
+        queryset=Store.objects.none(),
+        required=False
+    )
+
+    member = forms.ModelChoiceField(
+        queryset=FamilyMember.objects.none(),
+        required=False,
+        label="User"
+    )
+
+    min_amount = forms.DecimalField(required=False, decimal_places=2)
+    max_amount = forms.DecimalField(required=False, decimal_places=2)
+
+    description = forms.CharField(required=False, label="Description contains")
+
+    def __init__(self, *args, household=None, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if household:
+            self.fields['category'].queryset = Category.objects.filter(
+                household=household,
+                deleted_at__isnull=True
+            )
+            self.fields['store'].queryset = Store.objects.filter(
+                household=household,
+                deleted_at__isnull=True
+            )
+            self.fields['member'].queryset = household.members.all()
+        self.fields['member'].label_from_instance = lambda obj: obj.user.first_name
+
+class StoreForm(forms.ModelForm):
+    class Meta:
+        model = Store
+        fields = ['name', 'default_category']
+
+    def __init__(self, *args, **kwargs):
+        household = kwargs.pop('household', None)
+        super().__init__(*args, **kwargs)
+
+        if household:
+            self.fields['default_category'].queryset = Category.objects.filter(
+                household=household,
+                income_expense='EX',
+                deleted_at__isnull=True
+            )
+

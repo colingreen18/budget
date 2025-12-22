@@ -181,14 +181,10 @@ class Budget(models.Model):
 
     @staticmethod
     def get_budget_for_month(household, category, year, month):
-        """
-        Returns the Budget row for the given household, category, and month.
-        """
-        # Calculate first and last day of the month
         month_start = date(year, month, 1)
         month_end = date(year, month, monthrange(year, month)[1])
 
-        budget = Budget.objects.filter(
+        return Budget.objects.filter(
             household=household,
             category=category,
             start_date__lte=month_end
@@ -196,5 +192,27 @@ class Budget(models.Model):
             Q(end_date__gte=month_start) | Q(end_date__isnull=True)
         ).first()
 
-        return budget
+    @staticmethod
+    def get_budget_for_range(household, category, start_date, end_date):
+        # Single month shortcut
+        if start_date.year == end_date.year and start_date.month == end_date.month:
+            budget = Budget.get_budget_for_month(household, category, start_date.year, start_date.month)
+            return budget.monthly_amount if budget else 0
 
+        # Multiple months
+        budgets = Budget.objects.filter(
+            household=household,
+            category=category,
+            start_date__lte=end_date
+        ).filter(
+            Q(end_date__gte=start_date) | Q(end_date__isnull=True)
+        )
+
+        total_budget = 0
+        for b in budgets:
+            budget_start = max(b.start_date, start_date)
+            budget_end = min(b.end_date if b.end_date else end_date, end_date)
+            days_in_overlap = (budget_end - budget_start).days + 1
+            total_budget += (b.monthly_amount / 30) * days_in_overlap  # approximate per day
+
+        return round(total_budget, 2)

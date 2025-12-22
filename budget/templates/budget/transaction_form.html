@@ -1,13 +1,68 @@
 {% extends "budget/base.html" %}
 
 {% block content %}
-<h2>{{ action }} Transaction</h2>
+<div class="container">
+    <h2>{{ action }} Transaction</h2>
 
-<form method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">{{ action }}</button>
-</form>
+    <form method="post">
+        {% csrf_token %}
 
-<p><a href="{% url 'dashboard' %}">Back to Dashboard</a></p>
+        <div class="form-row">
+            <label for="id_amount">Amount</label>
+            {{ form.amount }}
+        </div>
+
+        <div class="form-row">
+            <label for="id_date">Date</label>
+            {{ form.date }}
+        </div>
+
+        <div class="form-row">
+            <label for="id_store">Store</label>
+            <select id="id_store" name="store">
+                <option value="">---------</option>
+                {% for store in form.fields.store.queryset %}
+                    <option value="{{ store.id }}"
+                            data-default-category="{{ store.default_category_id }}">
+                        {{ store.name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-row">
+            <label for="id_category">Category</label>
+            {{ form.category }}
+        </div>
+
+        <div class="form-row">
+            <label for="id_description">Description</label>
+            {{ form.description }}
+        </div>
+
+        <button type="submit">Save Transaction</button>
+    </form>
+
+    <p style="margin-top: 15px;">
+        <a href="{% url 'dashboard' %}">← Back to Dashboard</a>
+    </p>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const storeSelect = document.getElementById('id_store');
+    const categorySelect = document.getElementById('id_category');
+
+    if (!storeSelect || !categorySelect) return;
+
+    storeSelect.addEventListener('change', function () {
+        const selectedOption = storeSelect.options[storeSelect.selectedIndex];
+        const defaultCategoryId = selectedOption.dataset.defaultCategory;
+
+        if (defaultCategoryId) {
+            categorySelect.value = defaultCategoryId;
+        }
+    });
+});
+</script>
 {% endblock %}
