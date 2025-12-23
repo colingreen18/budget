@@ -1,4 +1,5 @@
 from calendar import monthrange
+from datetime import datetime
 from django import forms
 from django.contrib import messages
 from django.contrib.auth.models import User
@@ -62,6 +63,11 @@ def dashboard(request):
     # Default date range: current month
     start_date = request.GET.get('start_date', today.replace(day=1))
     end_date = request.GET.get('end_date', today)
+
+    if isinstance(start_date, str):
+        start_date = timezone.make_aware(datetime.strptime(start_date, '%Y-%m-%d'))
+    if isinstance(end_date, str):
+        end_date = timezone.make_aware(datetime.combine(datetime.strptime(end_date, '%Y-%m-%d').date(),datetime.max.time()))
 
     # Recent transactions
     recent_transactions = Transaction.objects.filter(

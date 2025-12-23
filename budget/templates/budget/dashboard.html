@@ -46,23 +46,25 @@
 
     <!-- Budget vs Spending Bar Chart -->
     <h3>Budget Summary</h3>
-    <form method="get" class="filter-form">
-        <fieldset>
-            <legend>Filter Date Range</legend>
-            <form id="month-select-form">
-                <label for="month-select">Select Month:</label>
-                <input type="month" id="month-select" name="month">
-            </form>
-            <div class="filter-row">
-                <div class="filter-field">
-                    {{ filter_form.start_date.label_tag }} {{ filter_form.start_date }} {{ filter_form.end_date.label_tag }} {{ filter_form.end_date }}
+    <div class='flex-form'>
+        <form method="get" class="filter-form">
+            <fieldset>
+                <legend>Filter Date Range</legend>
+                <form id="month-select-form">
+                    <label for="month-select">Select Month:</label>
+                    <input type="month" id="month-select" name="month">
+                </form>
+                <div class="filter-row">
+                    <div class="filter-field">
+                        {{ filter_form.start_date.label_tag }} {{ filter_form.start_date }} {{ filter_form.end_date.label_tag }} {{ filter_form.end_date }}
+                    </div>
+                    <div class="filter-field">
+                        <button type="submit">Apply</button>
+                    </div>
                 </div>
-                <div class="filter-field">
-                    <button type="submit">Apply</button>
-                </div>
-            </div>
-        </fieldset>
-    </form>
+            </fieldset>
+        </form>
+    </div>
     <div class="chart-wrapper">
         <canvas id="budgetChart" width='600' height='400'></canvas>
     </div>
