@@ -63,12 +63,6 @@ def dashboard(request):
     start_date = request.GET.get('start_date', today.replace(day=1))
     end_date = request.GET.get('end_date', today)
 
-    # Convert to date objects if strings
-    if isinstance(start_date, str):
-        start_date = timezone.datetime.strptime(start_date, "%Y-%m-%d").date()
-    if isinstance(end_date, str):
-        end_date = timezone.datetime.strptime(end_date, "%Y-%m-%d").date()
-
     # Recent transactions
     recent_transactions = Transaction.objects.filter(
         member__household=household

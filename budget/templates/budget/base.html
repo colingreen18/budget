@@ -8,10 +8,21 @@
 </head>
 <body>
     {% if user.is_authenticated and request.path != '/signup/' and request.path != '/login/' %}
-    <p>Logged in as {{ user.first_name }} | <a href="{% url 'logout' %}">Logout</a></p>
+    <p class='login-status'>Logged in as {{ user.first_name }} -  <a href="{% url 'logout' %}">Logout</a></p>
+    <h1> {{user.familymember.household}} Budget </h1>
+    <hr>
+    <div class="main-links">
+        <a href="{% url 'dashboard' %}" class='link'>Home</a>
+        <a href="{% url 'transaction_create' %}" class='link'>New Transaction</a>
+        <a href="{% url 'transaction_list' %}" class='link'>Transactions</a>
+        <a href="{% url 'category_list' %}" class='link'>Categories</a>
+        <a href="{% url 'store_list' %}" class='link'>Stores</a>
+    </div>
+    <hr>
     {% endif %}
 
-    <hr>
+    
+
     {% block content %}{% endblock %}
 </body>
 </html>

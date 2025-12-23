@@ -5,26 +5,27 @@
     <h2>Stores</h2>
 
     <a href="{% url 'store_create' %}">+ Add Store</a>
-
-    <table class="sortable">
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>Default Category</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for store in stores %}
-            <tr>
-                <td>{{ store.name }}</td>
-                <td>{{ store.default_category|default:"-" }}</td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="2">No stores yet</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <div class='table-wrapper'>
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Default Category</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for store in stores %}
+                <tr>
+                    <td>{{ store.name }}</td>
+                    <td>{{ store.default_category|default:"-" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="2">No stores yet</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </div>
 {% endblock %}
