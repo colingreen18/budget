@@ -1,25 +1,28 @@
 {% extends "budget/base.html" %}
 
 {% block content %}
-<div class="container">
-    <h2>{{ action }} Transaction</h2>
 
-    <form method="post">
+<div class="row justify-content-center">
+  <div class="col-12 col-md-6">
+
+    <h2 class="mb-4 text-center">{{ action }} Transaction</h2>
+
+    <form method="post" class="card p-4 shadow-sm">
         {% csrf_token %}
 
-        <div class="form-row">
-            <label for="id_amount">Amount</label>
+        <div class="mb-3">
+            <label for="id_amount" class="form-label">Amount</label>
             {{ form.amount }}
         </div>
 
-        <div class="form-row">
-            <label for="id_date">Date</label>
+        <div class="mb-3">
+            <label for="id_date" class="form-label">Date</label>
             {{ form.date }}
         </div>
 
-        <div class="form-row">
-            <label for="id_store">Store</label>
-            <select id="id_store" name="store">
+        <div class="mb-3">
+            <label for="id_store" class="form-label">Store</label>
+            <select id="id_store" name="store" class="form-select">
                 <option value="">---------</option>
                 {% for store in form.fields.store.queryset %}
                     <option value="{{ store.id }}"
@@ -30,22 +33,29 @@
             </select>
         </div>
 
-        <div class="form-row">
-            <label for="id_category">Category</label>
+        <div class="mb-3">
+            <label for="id_category" class="form-label">Category</label>
             {{ form.category }}
         </div>
 
-        <div class="form-row">
-            <label for="id_description">Description</label>
+        <div class="mb-3">
+            <label for="id_description" class="form-label">Description</label>
             {{ form.description }}
         </div>
 
-        <button type="submit">Save Transaction</button>
+        <div class="d-grid mt-3">
+            <button type="submit" class="btn btn-primary">Save Transaction</button>
+        </div>
+
     </form>
 
-    <p style="margin-top: 15px;">
-        <a href="{% url 'dashboard' %}">← Back to Dashboard</a>
-    </p>
+    <div class="text-center mt-3">
+        <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary btn-sm">
+            ← Back to Dashboard
+        </a>
+    </div>
+
+  </div>
 </div>
 
 <script>
@@ -65,4 +75,5 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 });
 </script>
+
 {% endblock %}

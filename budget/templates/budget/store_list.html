@@ -1,16 +1,20 @@
 {% extends "budget/base.html" %}
 
 {% block content %}
-<div class="container">
-    <h2>Stores</h2>
+<div class="container mt-4">
+    <h2 class="mb-3 text-center">Stores</h2>
 
-    <a href="{% url 'store_create' %}">+ Add Store</a>
-    <div class='table-wrapper'>
-        <table>
+    <div class="d-flex justify-content-center mb-3">
+        <a href="{% url 'store_create' %}" class="btn btn-primary btn-sm">+ Add Store</a>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-striped table-hover align-middle">
             <thead>
                 <tr>
                     <th>Name</th>
                     <th>Default Category</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -18,10 +22,40 @@
                 <tr>
                     <td>{{ store.name }}</td>
                     <td>{{ store.default_category|default:"-" }}</td>
+                    <td>
+                        <a href="{% url 'store_update' store.pk %}" class="btn btn-sm btn-outline-secondary">
+                            Edit
+                        </a>
+                        <!-- Delete button triggers modal -->
+                        <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ store.pk }}">
+                            Delete
+                        </button>
+
+                        <!-- Modal -->
+                        <div class="modal fade" id="deleteModal{{ store.pk }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ store.pk }}" aria-hidden="true">
+                          <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content">
+                              <div class="modal-header">
+                                <h5 class="modal-title" id="deleteModalLabel{{ store.pk }}">Confirm Delete</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                              </div>
+                              <div class="modal-body">
+                                Are you sure you want to delete the store <strong>{{ store.name }}</strong>?
+                                This will not affect any past transactions.
+                              </div>
+                              <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                                <a href="{% url 'store_delete' store.pk %}" class="btn btn-danger btn-sm">Delete</a>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                    </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="2">No stores yet</td>
+                    <td colspan="3" class="text-center">No stores yet</td>
                 </tr>
                 {% endfor %}
             </tbody>

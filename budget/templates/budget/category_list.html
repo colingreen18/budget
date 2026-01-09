@@ -2,19 +2,22 @@
 
 {% block content %}
 
-<div class="category-header">
-    <a href="{% url 'category_create' %}">+ Add Category</a>
-    <h2>Income Categories</h2>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">Income Categories</h2>
+    <a href="{% url 'category_create' %}" class="btn btn-sm btn-success">
+        + Add Category
+    </a>
 </div>
-<div class='table-wrapper'>
-    <table>
-        <thead>
+
+<div class="table-responsive mb-5">
+    <table class="table table-striped table-bordered align-middle">
+        <thead class="table-light">
             <tr>
                 <th>Name</th>
                 <th>Fixed</th>
                 <th>Necessity</th>
                 <th>Active</th>
-                <th>Budgeted Amount</th>
+                <th>Budget</th>
                 <th>Actions</th>
             </tr>
         </thead>
@@ -26,25 +29,28 @@
                 <td>{{ item.category.necessity|yesno:"Yes,No" }}</td>
                 <td>{{ item.category.is_active|yesno:"Yes,No" }}</td>
                 <td>{{ item.budget|default:"-" }}</td>
-                <td><a href="{% url 'category_update' item.category.pk %}">Edit</a></td>
+                <td>
+                    <a href="{% url 'category_update' item.category.pk %}" class="btn btn-sm btn-outline-primary">
+                        Edit
+                    </a>
+                </td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
 </div>
 
-<div class="category-header">
-    <h2>Expense Categories</h2>
-</div>
-<div class='table-wrapper'>
-    <table>
-        <thead>
+<h2 class="mb-3">Expense Categories</h2>
+
+<div class="table-responsive">
+    <table class="table table-striped table-bordered align-middle">
+        <thead class="table-light">
             <tr>
                 <th>Name</th>
                 <th>Fixed</th>
                 <th>Necessity</th>
                 <th>Active</th>
-                <th>Budgeted Amount</th>
+                <th>Budget</th>
                 <th>Actions</th>
             </tr>
         </thead>
@@ -56,10 +62,35 @@
                 <td>{{ item.category.necessity|yesno:"Yes,No" }}</td>
                 <td>{{ item.category.is_active|yesno:"Yes,No" }}</td>
                 <td>{{ item.budget|default:"-" }}</td>
-                <td><a href="{% url 'category_update' item.category.pk %}">Edit</a></td>
+                <td>
+                    <a href="{% url 'category_update' item.category.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a>
+                
+                    <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteCategoryModal{{ item.category.pk }}">
+                        Delete
+                    </button>
+                    <!-- Modal -->
+                    <div class="modal fade" id="deleteCategoryModal{{ item.category.pk }}" tabindex="-1" aria-labelledby="deleteCategoryLabel{{ item.category.pk }}" aria-hidden="true">
+                      <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+                          <div class="modal-header">
+                            <h5 class="modal-title" id="deleteCategoryLabel{{ item.category.pk }}">Confirm Delete</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                          </div>
+                          <div class="modal-body">
+                            Are you sure you want to delete the category <strong>{{ item.category.name }}</strong>? This will not affect past transactions.
+                          </div>
+                          <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                            <a href="{% url 'category_delete' item.category.pk %}" class="btn btn-danger btn-sm">Delete</a>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                </td>                
             </tr>
             {% endfor %}
         </tbody>
     </table>
 </div>
+
 {% endblock %}

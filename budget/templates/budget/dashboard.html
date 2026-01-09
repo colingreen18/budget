@@ -1,108 +1,143 @@
 {% extends "budget/base.html" %}
 
 {% block content %}
-<div class="container">
-    <!-- Recent Transactions -->
-    <h3>Recent Transactions</h3>
-    <div class='table-wrapper'>
-        <table class='flex-table'>
-            <thead>
-                <tr>
-                    <th>Date</th>
-                    <th>Category</th>
-                    <th>Store</th>
-                    <th>Description</th>
-                    <th>Member</th>
-                    <th>Amount</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for t in recent_transactions %}
-                <tr>
-                    <td>{{ t.date|date:"Y-m-d" }}</td>
-                    <td>{{ t.category.name }}</td>
-                    <td>{{ t.store.name|default:"—" }}</td>
-                    <td>{{ t.description }}</td>
-                    <td>{{ t.member.user.first_name }}</td>
-                    <td style="text-align: right;
-                        {% if t.category.income_expense == 'EX' %}color: #b00020;{% else %}color: #007a1f;{% endif %}">
-                        {% if t.category.income_expense == 'EX' %}-{% endif %}
-                        {{ t.amount }}
-                    </td>
-                    <td>
-                        <a href="{% url 'transaction_update' t.pk %}">Edit</a>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="4" style="text-align:center;">No transactions this month</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    <hr>
 
-    <!-- Budget vs Spending Bar Chart -->
-    <h3>Budget Summary</h3>
-    <div class='flex-form'>
-        <form method="get" class="filter-form">
-            <fieldset>
-                <legend>Filter Date Range</legend>
-                <form id="month-select-form">
-                    <label for="month-select">Select Month:</label>
-                    <input type="month" id="month-select" name="month">
-                </form>
-                <div class="filter-row">
-                    <div class="filter-field">
-                        {{ filter_form.start_date.label_tag }} {{ filter_form.start_date }} {{ filter_form.end_date.label_tag }} {{ filter_form.end_date }}
+<h3>Recent Transactions</h3>
+<div class='table-responsive'>
+    <table class='table table-striped table-bordered align-middle'>
+        <thead class="table-light">
+            <tr>
+                <th>Date</th>
+                <th>Category</th>
+                <th class="text-end">Amount</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for t in recent_transactions %}
+            <tr>
+                <td>{{ t.date|date:"Y-m-d" }}</td>
+                <td>{{ t.category.name }}</td>
+                <td class="text-end {% if t.category.income_expense == 'EX' %}text-danger{% else %}text-success{% endif %}">
+                    {% if t.category.income_expense == 'EX' %}-{% endif %}
+                    {{ t.amount }}
+                </td>
+                <td>
+                    <!-- Edit Button -->
+                    <a href="{% url 'transaction_update' t.pk %}" class="btn btn-sm btn-outline-primary">
+                        Edit
+                    </a>
+
+                    <!-- Delete Button -->
+                    <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteTransactionModal{{ t.pk }}">
+                        Delete
+                    </button>
+
+                    <!-- Delete Confirmation Modal -->
+                    <div class="modal fade" id="deleteTransactionModal{{ t.pk }}" tabindex="-1" aria-labelledby="deleteTransactionLabel{{ t.pk }}" aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="deleteTransactionLabel{{ t.pk }}">Confirm Delete</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    Are you sure you want to delete this transaction: <strong>{{ t.description }}</strong>?
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                                    <form method="post" action="{% url 'transaction_delete' t.pk %}">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="filter-field">
-                        <button type="submit">Apply</button>
-                    </div>
-                </div>
-            </fieldset>
-        </form>
-    </div>
-    <div class="chart-wrapper">
-        <canvas id="budgetChart" width='600' height='400'></canvas>
-    </div>
+
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="7" class="text-center">No transactions this month</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 </div>
 
 
+<hr class="my-4">
+
+<h3 class="mb-3">Budget Summary</h3>
+
+<div class="card mb-4">
+  <div class="card-body">
+
+    <form method="get" id="chart-filter-form">
+      <div class="row g-3 align-items-end">
+
+        <div class="col-12 col-md-4">
+          <label for="month-select" class="form-label">Select Month</label>
+          <input type="month" id="month-select" name="month" class="form-control">
+        </div>
+
+        <div class="col-6 col-md-3">
+          {{ filter_form.start_date.label_tag }}
+          {{ filter_form.start_date }}
+        </div>
+
+        <div class="col-6 col-md-3">
+          {{ filter_form.end_date.label_tag }}
+          {{ filter_form.end_date }}
+        </div>
+
+        <div class="col-12 col-md-2 d-grid">
+          <button type="submit" class="btn btn-primary">Apply</button>
+        </div>
+
+      </div>
+    </form>
+
+  </div>
+</div>
+
+<div class="card p-3">
+    <canvas id="budgetChart"></canvas>
+</div>
+
 <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const monthSelect = document.getElementById('month-select');
-        const startInput = document.getElementById('id_start_date');
-        const endInput = document.getElementById('id_end_date');
-        const chartForm = document.getElementById('chart-filter-form'); // the chart filter form
-    
-        monthSelect.addEventListener('change', () => {
-            if (!monthSelect.value) return;
-            const [year, month] = monthSelect.value.split('-').map(Number);
-    
-            const firstDay = new Date(year, month - 1, 1);
-            const lastDay = new Date(year, month, 0); // last day of month
-    
-            startInput.value = firstDay.toISOString().split('T')[0];
-            endInput.value = lastDay.toISOString().split('T')[0];
-    
-            // Automatically submit the form
-            chartForm.submit();
-        });
+document.addEventListener('DOMContentLoaded', () => {
+    const monthSelect = document.getElementById('month-select');
+    const startInput = document.getElementById('id_start_date');
+    const endInput = document.getElementById('id_end_date');
+    const chartForm = document.getElementById('chart-filter-form');
+
+    monthSelect.addEventListener('change', () => {
+        if (!monthSelect.value) return;
+        const [year, month] = monthSelect.value.split('-').map(Number);
+
+        const firstDay = new Date(year, month - 1, 1);
+        const lastDay = new Date(year, month, 0);
+
+        startInput.value = firstDay.toISOString().split('T')[0];
+        endInput.value = lastDay.toISOString().split('T')[0];
+
+        chartForm.submit();
     });
-    </script>
-    
-<!-- Chart.js -->
+});
+</script>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    const ctx = document.getElementById('budgetChart').getContext('2d');
-    const labels = [{% for item in summary %}'{{ item.category }}',{% endfor %}];
-    const budgets = [{% for item in summary %}{{ item.budget }},{% endfor %}];
-    const spent = [{% for item in summary %}{{ item.spent }},{% endfor %}];
+const ctx = document.getElementById('budgetChart').getContext('2d');
+const labels = [{% for item in summary %}'{{ item.category }}',{% endfor %}];
+const budgets = [{% for item in summary %}{{ item.budget }},{% endfor %}];
+const spent = [{% for item in summary %}{{ item.spent }},{% endfor %}];
 
-    const data = {
+new Chart(ctx, {
+    type: 'bar',
+    data: {
         labels: labels,
         datasets: [
             {
@@ -116,21 +151,15 @@
                 backgroundColor: 'rgba(255, 99, 132, 0.5)'
             }
         ]
-    };
-
-    const config = {
-        type: 'bar',
-        data: data,
-        options: {
-            responsive: true,
-            scales: {
-                y: {
-                    beginAtZero: true
-                }
-            }
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: { beginAtZero: true }
         }
-    };
-
-    new Chart(ctx, config);
+    }
+});
 </script>
+
 {% endblock %}

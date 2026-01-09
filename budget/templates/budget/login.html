@@ -1,10 +1,33 @@
 {% extends "budget/base.html" %}
 
 {% block content %}
-<h2>Login</h2>
-<form method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Login</button>
-</form>
+
+<div class="row justify-content-center">
+  <div class="col-12 col-sm-8 col-md-5">
+
+    <h2 class="mb-4 text-center">Login</h2>
+
+    <form method="post" class="card p-4 shadow-sm">
+        {% csrf_token %}
+
+        <div class="mb-3">
+            {{ form.as_p }}
+        </div>
+
+        <div class="d-grid mt-3">
+            <button type="submit" class="btn btn-primary">
+                Login
+            </button>
+        </div>
+    </form>
+
+    <div class="text-center mt-3">
+        <a href="{% url 'signup' %}" class="btn btn-outline-secondary btn-sm">
+            Create Account
+        </a>
+    </div>
+
+  </div>
+</div>
+
 {% endblock %}

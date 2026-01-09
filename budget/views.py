@@ -207,6 +207,19 @@ def category_update(request, pk):
 
 
 @login_required
+def category_delete(request, pk):
+    household = request.user.familymember.household
+    category = get_object_or_404(Category, pk=pk, household=household)
+
+    # Soft delete
+    category.deleted_at = timezone.now()
+    category.is_active = False  # optional: hide in dropdowns/forms
+    category.save()
+
+    return redirect('category_list')
+
+
+@login_required
 def transaction_create(request):
     household = request.user.familymember.household
 
@@ -229,12 +242,14 @@ def store_list(request):
     household = request.user.familymember.household
     stores = Store.objects.filter(
         household=household,
-        deleted_at__isnull=True
+        deleted_at__isnull=True,
+        is_active=True
     ).order_by('name')
 
     return render(request, 'budget/store_list.html', {
         'stores': stores
     })
+
 
 
 @login_required
@@ -255,6 +270,38 @@ def store_create(request):
         'form': form,
         'action': 'Create'
     })
+
+
+@login_required
+def store_update(request, pk):
+    household = request.user.familymember.household
+    store = get_object_or_404(Store, pk=pk, household=household)  # ensure user only edits their own stores
+
+    if request.method == "POST":
+        form = StoreForm(request.POST, instance=store, household=household)
+        if form.is_valid():
+            form.save()
+            return redirect('store_list')
+    else:
+        form = StoreForm(instance=store, household=household)
+
+    return render(request, 'budget/store_form.html', {
+        'form': form,
+        'action': 'Update'
+    })
+
+
+@login_required
+def store_delete(request, pk):
+    household = request.user.familymember.household
+    store = get_object_or_404(Store, pk=pk, household=household)
+
+    # Soft delete
+    store.deleted_at = timezone.now()
+    store.is_active = False  # optional: mark inactive
+    store.save()
+
+    return redirect('store_list')
 
 
 @login_required
@@ -327,3 +374,49 @@ def transaction_update(request, pk):
         'form': form,
         'action': 'Edit'
     })
+
+
+@login_required
+def transaction_delete(request, pk):
+    # Only allow deleting transactions in the current user's household
+    household = request.user.familymember.household
+    transaction = get_object_or_404(Transaction, pk=pk, category__household=household)
+
+    if request.method == "POST":
+        transaction.delete()
+        return redirect('transaction_list')
+
+    # Optional: show a confirmation page before deletion
+    return render(request, 'budget/transaction_confirm_delete.html', {
+        'transaction': transaction
+    })
+
+
+@login_required
+def profile(request):
+    if request.method == 'POST':
+        user = request.user
+        first = request.POST.get('first_name')
+        last = request.POST.get('last_name')
+        email = request.POST.get('email')
+        pw1 = request.POST.get('password1')
+        pw2 = request.POST.get('password2')
+
+        user.first_name = first
+        user.last_name = last
+        user.email = email
+
+        # Update password if provided
+        if pw1 or pw2:
+            if pw1 == pw2:
+                user.set_password(pw1)
+                update_session_auth_hash(request, user)  # keep user logged in
+            else:
+                messages.error(request, "Passwords do not match.")
+                return redirect('profile')
+
+        user.save()
+        messages.success(request, "Profile updated successfully.")
+        return redirect('profile')
+
+    return render(request, 'budget/profile.html')

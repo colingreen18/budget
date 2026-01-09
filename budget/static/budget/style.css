@@ -1,66 +1,88 @@
-.login-status{
-    display: flex;
-    justify-content: flex-end
-}
-
-.main-links{
-    display: flex;
-    flex-flow: row nowrap;
-    justify-content: space-evenly;
-}
-
-.link{
-    display: flex;
-    padding: 10px 20px;
-    background-color: #007bff;
-    color: #fff;
-    border-radius: 4px;
-    text-decoration: none;
-    cursor: pointer
-}
-
-.table-wrapper {
-    display: flex;
-    justify-content: center;
-    overflow-x: auto;
-    flex-shrink:  0;
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.95rem;
-}
-
-.table-wrapper thead th {
-    text-align: left;
-    font-weight: 600;
-    padding: 0.75rem;
-    background-color: #f8f9fb;
-    border-bottom: 2px solid #e0e3e8;
-}
-
-.table-wrapper td {
-    padding: 0.75rem;
-    border-bottom: 1px solid #eceff3;
-  }
-  
+/* ---------------------------------------------
+   Headings
+--------------------------------------------- */
 h1, h2, h3, h4, h5, h6 {
-    text-align: center;
-  }
-
-.chart-wrapper {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 100%;
-    max-width: 100%;
-  }
-  
-.chart-wrapper canvas {
-    width: 100%;
-    height: auto;
-  }
-  
-.flex-form {
-    display: flex;
-    justify-content: center;
-    align-items: center;
+  /* Optional: center headings if desired */
+  text-align: center;
+  margin-bottom: 1rem;
 }
+
+/* ---------------------------------------------
+ Tables
+--------------------------------------------- */
+.table {
+  font-size: 0.95rem; /* Slightly smaller than default */
+}
+
+.table thead th {
+  font-weight: 600;
+}
+
+.table td, .table th {
+  vertical-align: middle;
+}
+
+/* ---------------------------------------------
+ Charts
+--------------------------------------------- */
+.chart-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  max-width: 100%;
+}
+
+.chart-wrapper canvas {
+  width: 100% !important;
+  height: auto !important;
+}
+
+/* ---------------------------------------------
+ Forms
+--------------------------------------------- */
+.form-label {
+  font-weight: 500;
+}
+
+/* Optional: reduce spacing for card forms */
+.card .form-control, .card .form-select {
+  margin-bottom: 1rem;
+}
+
+/* ---------------------------------------------
+ Buttons
+--------------------------------------------- */
+/* Bootstrap handles button styling, no custom needed */
+
+/* ---------------------------------------------
+ Navbar / login-status
+--------------------------------------------- */
+/* Bootstrap handles navbar, remove .login-status */
+
+/* ---------------------------------------------
+ Misc spacing
+--------------------------------------------- */
+.mb-3 {
+  margin-bottom: 1rem !important;
+}
+
+.mt-3 {
+  margin-top: 1rem !important;
+}
+
+.mt-4 {
+  margin-top: 1.5rem !important;
+}
+
+.mb-4 {
+  margin-bottom: 1.5rem !important;
+}
+
+.d-flex-center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+

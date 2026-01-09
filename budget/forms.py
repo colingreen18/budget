@@ -4,6 +4,20 @@ from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
 from django.utils import timezone
 
+def bootstrapify(form):
+    for field in form.fields.values():
+        widget = field.widget
+
+        if isinstance(widget, forms.CheckboxInput):
+            widget.attrs['class'] = 'form-check-input'
+        elif isinstance(widget, forms.RadioSelect):
+            widget.attrs['class'] = 'form-check-input'
+        elif isinstance(widget, forms.Select):
+            widget.attrs['class'] = 'form-select'
+        else:
+            widget.attrs['class'] = 'form-control'
+
+
 class SignUpForm(forms.Form):
     email = forms.EmailField(label="Email")
     first_name = forms.CharField(max_length=30, label="First Name")
@@ -26,6 +40,10 @@ class SignUpForm(forms.Form):
         if not cleaned_data.get('household_name') and not cleaned_data.get('invite_code'):
             raise forms.ValidationError("Provide either a new household name or a valid invite code.")
         return cleaned_data
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        bootstrapify(self)
 
 
 class CategoriesForm(forms.Form):
@@ -43,6 +61,10 @@ class CategoriesForm(forms.Form):
     required=False,
     initial=True,
     label="Active")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        bootstrapify(self)
 
 
 class TransactionForm(forms.ModelForm):
@@ -69,8 +91,10 @@ class TransactionForm(forms.ModelForm):
         # Set default date to today if not already set
         if not self.initial.get('date'):
             self.initial['date'] = timezone.now().date()
-        
+
         self.fields['store'].widget.attrs['data-has-defaults'] = 'true'
+
+        bootstrapify(self)
 
 
 class TransactionFilterForm(forms.Form):
@@ -113,6 +137,8 @@ class TransactionFilterForm(forms.Form):
             self.fields['member'].queryset = household.members.all()
         self.fields['member'].label_from_instance = lambda obj: obj.user.first_name
 
+        bootstrapify(self)
+
 class StoreForm(forms.ModelForm):
     class Meta:
         model = Store
@@ -128,4 +154,5 @@ class StoreForm(forms.ModelForm):
                 income_expense='EX',
                 deleted_at__isnull=True
             )
-
+        
+        bootstrapify(self)
