@@ -27,6 +27,9 @@ urlpatterns = [
     path('store/<int:pk>/delete/', views.store_delete, name='store_delete'),
 
     # Profile
-    path('profile/', views.profile, name='profile')
+    path('profile/', views.profile, name='profile'),
+
+    # Insights
+    path('insights/', views.insights, name='insights'),
 ]
 

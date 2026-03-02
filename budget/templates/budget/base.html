@@ -15,29 +15,40 @@
 {% if user.is_authenticated and request.path != '/signup/' and request.path != '/login/' %}
 
 <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-  <div class="container-fluid">
-    <span class="navbar-brand">
-        {{ user.familymember.household }} Budget
-    </span>
+  <div class="container-fluid position-relative">
 
+    <!-- LEFT: Menu toggle + nav -->
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav">
       <span class="navbar-toggler-icon"></span>
     </button>
 
     <div class="collapse navbar-collapse" id="mainNav">
-      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+      <ul class="navbar-nav">
         <li class="nav-item"><a class="nav-link" href="{% url 'dashboard' %}">Home</a></li>
         <li class="nav-item"><a class="nav-link" href="{% url 'transaction_list' %}">Transactions</a></li>
         <li class="nav-item"><a class="nav-link" href="{% url 'category_list' %}">Categories</a></li>
         <li class="nav-item"><a class="nav-link" href="{% url 'store_list' %}">Stores</a></li>
+        <li class="nav-item"><a class="nav-link" href="{% url 'insights' %}">Insights</a></li>
         <li class="nav-item"><a class="nav-link" href="{% url 'profile' %}">Profile</a></li>
       </ul>
-
-      <span class="navbar-text text-white">
-        {{ user.first_name }} |
-        <a href="{% url 'logout' %}" class="text-white text-decoration-underline">Logout</a>
-      </span>
     </div>
+
+    <!-- CENTER: Title -->
+    <span class="navbar-brand position-absolute start-50 translate-middle-x">
+      {{ user.familymember.household }} Budget
+    </span>
+
+    <!-- RIGHT: User -->
+    <div class="ms-auto navbar-text text-white d-flex align-items-center">
+      {{ user.first_name }} |
+      <form method="post" action="{% url 'logout' %}" class="d-inline ms-1">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-link text-white text-decoration-underline p-0">
+          Logout
+        </button>
+      </form>
+    </div>
+
   </div>
 </nav>
 

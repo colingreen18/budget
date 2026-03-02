@@ -75,7 +75,7 @@ class Store(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     deleted_at = models.DateTimeField(null=True, blank=True)
-    
+
     def __str__(self):
         return self.name
 
@@ -157,13 +157,19 @@ class Budget(models.Model):
     def update_amount(self, new_amount, start_date=None):
         """
         Update the budget amount in a time-versioned way:
-        - End the current row
-        - Create a new row with the new amount
+        - If updating on the same start_date, just update this record
+        - Otherwise, end the current row and create a new row with the new amount
         """
         start_date = start_date or timezone.now().date()
 
         if start_date < self.start_date:
             raise ValueError("New start_date cannot be before the current budget's start_date.")
+
+        # If updating on the same day it started, just update this record
+        if start_date == self.start_date:
+            self.monthly_amount = new_amount
+            self.save()
+            return self
 
         # End current budget row if ongoing
         if self.end_date is None:

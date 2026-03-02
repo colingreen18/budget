@@ -1,14 +1,14 @@
 from calendar import monthrange
-from datetime import datetime
+from datetime import datetime, date, timedelta
 from django import forms
 from django.contrib import messages
 from django.contrib.auth.models import User
-from django.contrib.auth import login
+from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum, Q
 from django.utils import timezone
 from django.shortcuts import render, redirect, get_object_or_404
-from .forms import SignUpForm, CategoriesForm, TransactionForm, TransactionFilterForm, StoreForm
+from .forms import SignUpForm, CategoriesForm, TransactionForm, TransactionFilterForm, StoreForm, DateRangeForm
 from .models import FamilyMember, Household, Category, Store, Transaction, RecurringTransaction, Budget
 
 
@@ -22,7 +22,7 @@ def signup_view(request):
             last_name = form.cleaned_data['last_name']
             password = form.cleaned_data['password1']
 
-        
+
 
             user = User.objects.create_user(
                 username=email,
@@ -52,84 +52,160 @@ def signup_view(request):
 class DashboardFilterForm(forms.Form):
     start_date = forms.DateField(required=False, widget=forms.DateInput(attrs={'type': 'date'}))
     end_date = forms.DateField(required=False, widget=forms.DateInput(attrs={'type': 'date'}))
-    
+
 
 @login_required
 def dashboard(request):
-    member = request.user.familymember
-    household = member.household
+    household = request.user.familymember.household
     today = timezone.now().date()
-    
-    # Default date range: current month
-    start_date = request.GET.get('start_date', today.replace(day=1))
-    end_date = request.GET.get('end_date', today)
 
-    if isinstance(start_date, str):
-        start_date = timezone.make_aware(datetime.strptime(start_date, '%Y-%m-%d'))
-    if isinstance(end_date, str):
-        end_date = timezone.make_aware(datetime.combine(datetime.strptime(end_date, '%Y-%m-%d').date(),datetime.max.time()))
+    # Get filter parameters
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+    income_expense_filter = request.GET.get('income_expense', '')
+    fixed_filter = request.GET.get('fixed', '')
+    necessity_filter = request.GET.get('necessity', '')
 
-    # Recent transactions
-    recent_transactions = Transaction.objects.filter(
-        member__household=household
-    ).order_by('-date')[:10]
+    # Default to current month if no dates provided
+    if not start_date or not end_date:
+        start_date = today.replace(day=1)
+        end_date = date(today.year, today.month, monthrange(today.year, today.month)[1])
+    else:
+        start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+        end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
 
-    # Categories and budgets
-    categories = Category.objects.filter(household=household, deleted_at__isnull=True)
-    summary = []
-    for category in categories:
-        # Budget for this month (or start_date month)
-        budget = Budget.get_budget_for_range(household, category, start_date, end_date)
-        spent = Transaction.objects.filter(
-            category=category,
-            date__range=(start_date, end_date)
-        ).aggregate(total=Sum('amount'))['total'] or 0
-        summary.append({
-            'category': category.name,
-            'budget': budget if budget else 0,
-            'spent': spent,
-            'income_expense': category.income_expense
-        })
-
-    filter_form = DashboardFilterForm(initial={
+    # Initialize filter form
+    filter_form = DateRangeForm(initial={
         'start_date': start_date,
         'end_date': end_date
     })
 
+    # Get recent transactions - filter by member's household
+    recent_transactions = Transaction.objects.filter(
+        member__household=household,
+        date__gte=start_date,
+        date__lte=end_date
+    ).select_related('category').order_by('-date')[:10]
+
+    # Calculate actual income and expenses
+    actual_income = 0
+    actual_necessary_expenses = 0
+    actual_unnecessary_expenses = 0
+
+    all_transactions = Transaction.objects.filter(
+        member__household=household,
+        date__gte=start_date,
+        date__lte=end_date
+    ).select_related('category')
+
+    for trans in all_transactions:
+        if trans.category.income_expense == 'IN':
+            actual_income += trans.amount
+        else:
+            if trans.category.necessity:
+                actual_necessary_expenses += trans.amount
+            else:
+                actual_unnecessary_expenses += trans.amount
+
+    actual_total_expenses = actual_necessary_expenses + actual_unnecessary_expenses
+    actual_net = actual_income - actual_total_expenses
+
+    # Get all categories for the household
+    categories = Category.objects.filter(
+        household=household,
+        is_active=True,
+        deleted_at__isnull=True
+    ).order_by('name')
+
+    # Apply filters
+    if income_expense_filter:
+        categories = categories.filter(income_expense=income_expense_filter)
+    if fixed_filter:
+        categories = categories.filter(fixed=(fixed_filter == 'true'))
+    if necessity_filter:
+        categories = categories.filter(necessity=(necessity_filter == 'true'))
+
+    summary = []
+    for cat in categories:
+        # Get budget for the date range
+        budget_amount = Budget.get_budget_for_range(household, cat, start_date, end_date)
+
+        # Get actual spending/income for this category
+        spent = Transaction.objects.filter(
+            member__household=household,
+            category=cat,
+            date__gte=start_date,
+            date__lte=end_date
+        ).aggregate(total=Sum('amount'))['total'] or 0
+
+        summary.append({
+            'category': cat.name,
+            'budget': float(budget_amount),
+            'spent': float(spent)
+        })
+
     return render(request, 'budget/dashboard.html', {
         'recent_transactions': recent_transactions,
         'summary': summary,
-        'month': f"{start_date.strftime('%B %Y')} - {end_date.strftime('%B %Y')}",
-        'filter_form': filter_form
+        'filter_form': filter_form,
+        'start_date': start_date,
+        'end_date': end_date,
+        'actual_income': actual_income,
+        'actual_necessary_expenses': actual_necessary_expenses,
+        'actual_unnecessary_expenses': actual_unnecessary_expenses,
+        'actual_total_expenses': actual_total_expenses,
+        'actual_net': actual_net,
+        'income_expense_filter': income_expense_filter,
+        'fixed_filter': fixed_filter,
+        'necessity_filter': necessity_filter,
     })
-
 
 @login_required
 def category_list(request):
     household = request.user.familymember.household
     today = timezone.now().date()
-
     # All active categories
     categories = Category.objects.filter(household=household, deleted_at__isnull=True).order_by('-is_active', 'name')
-
     # Split into income and expense
     income_categories = []
     expense_categories = []
 
+    total_income = 0
+    total_necessary_expenses = 0
+    total_unnecessary_expenses = 0
+
     for cat in categories:
         budget = Budget.get_budget_for_month(household, cat, today.year, today.month)
+        budget_amount = budget.monthly_amount if budget else 0
+
         data = {
             'category': cat,
             'budget': budget.monthly_amount if budget else None
         }
+
         if cat.income_expense == 'IN':
             income_categories.append(data)
+            if budget_amount:
+                total_income += budget_amount
         else:
             expense_categories.append(data)
+            if budget_amount:
+                if cat.necessity:
+                    total_necessary_expenses += budget_amount
+                else:
+                    total_unnecessary_expenses += budget_amount
+
+    total_expenses = total_necessary_expenses + total_unnecessary_expenses
+    projected_savings = total_income - total_expenses
 
     return render(request, 'budget/category_list.html', {
         'income_categories': income_categories,
-        'expense_categories': expense_categories
+        'expense_categories': expense_categories,
+        'total_income': total_income,
+        'total_necessary_expenses': total_necessary_expenses,
+        'total_unnecessary_expenses': total_unnecessary_expenses,
+        'total_expenses': total_expenses,
+        'projected_savings': projected_savings,
     })
 
 
@@ -167,7 +243,6 @@ def category_create(request):
 def category_update(request, pk):
     household = request.user.familymember.household
     category = get_object_or_404(Category, pk=pk, household=household)
-
     today = timezone.now().date()
     budget = Budget.get_budget_for_month(household, category, today.year, today.month)
 
@@ -180,7 +255,6 @@ def category_update(request, pk):
             category.necessity = form.cleaned_data['necessity']
             category.is_active = form.cleaned_data['is_active']
             category.save()
-
             monthly_amount = form.cleaned_data.get('monthly_amount')
             if monthly_amount is not None:
                 if budget:
@@ -364,9 +438,9 @@ def transaction_update(request, pk):
         form = TransactionForm(request.POST, instance=transaction, household=household)
         if form.is_valid():
             updated_transaction = form.save(commit=False)
-            updated_transaction.member = request.user.familymember 
+            updated_transaction.member = request.user.familymember
             updated_transaction.save()
-            return redirect('transaction_list') 
+            return redirect('transaction_list')
     else:
         form = TransactionForm(instance=transaction, household=household)
 
@@ -420,3 +494,124 @@ def profile(request):
         return redirect('profile')
 
     return render(request, 'budget/profile.html')
+
+
+@login_required
+def insights(request):
+    household = request.user.familymember.household
+    today = timezone.now().date()
+
+    # Get the last 12 months of data
+    twelve_months_ago = today - timedelta(days=365)
+
+    # Monthly spending trend (last 12 months)
+    monthly_spending = []
+    monthly_income = []
+    monthly_labels = []
+    savings_rate = []
+
+    for i in range(12):
+        # Calculate month
+        month_date = today - timedelta(days=30 * i)
+        month_start = date(month_date.year, month_date.month, 1)
+        month_end = date(month_date.year, month_date.month, monthrange(month_date.year, month_date.month)[1])
+
+        # Get transactions for this month
+        month_transactions = Transaction.objects.filter(
+            member__household=household,
+            date__gte=month_start,
+            date__lte=month_end
+        ).select_related('category')
+
+        # Calculate income and expenses
+        income = 0
+        expenses = 0
+        for trans in month_transactions:
+            if trans.category.income_expense == 'IN':
+                income += trans.amount
+            else:
+                expenses += trans.amount
+
+        # Calculate savings rate
+        if income > 0:
+            rate = ((income - expenses) / income) * 100
+        else:
+            rate = 0
+
+        monthly_spending.insert(0, float(expenses))
+        monthly_income.insert(0, float(income))
+        monthly_labels.insert(0, month_start.strftime('%b %Y'))
+        savings_rate.insert(0, float(rate))
+
+    # Category breakdown (current month)
+    month_start = date(today.year, today.month, 1)
+    month_end = date(today.year, today.month, monthrange(today.year, today.month)[1])
+
+    category_breakdown = {}
+    category_transactions = Transaction.objects.filter(
+        member__household=household,
+        date__gte=month_start,
+        date__lte=month_end,
+        category__income_expense='EX'  # Only expenses for pie chart
+    ).select_related('category')
+
+    for trans in category_transactions:
+        if trans.category.name not in category_breakdown:
+            category_breakdown[trans.category.name] = 0
+        category_breakdown[trans.category.name] += float(trans.amount)
+
+    # Budget adherence score (current month)
+    categories = Category.objects.filter(
+        household=household,
+        is_active=True,
+        deleted_at__isnull=True
+    )
+
+    total_categories = 0
+    categories_on_budget = 0
+    category_adherence = []
+
+    for cat in categories:
+        budget = Budget.get_budget_for_month(household, cat, today.year, today.month)
+        if budget and budget.monthly_amount > 0:
+            spent = Transaction.objects.filter(
+                member__household=household,
+                category=cat,
+                date__gte=month_start,
+                date__lte=month_end
+            ).aggregate(total=Sum('amount'))['total'] or 0
+
+            adherence_pct = (spent / budget.monthly_amount) * 100
+            category_adherence.append({
+                'category': cat.name,
+                'adherence': float(adherence_pct),
+                'budget': float(budget.monthly_amount),
+                'spent': float(spent),
+                'on_budget': spent <= budget.monthly_amount
+            })
+
+            total_categories += 1
+            if spent <= budget.monthly_amount:
+                categories_on_budget += 1
+
+    # Calculate overall adherence score
+    if total_categories > 0:
+        budget_adherence_score = (categories_on_budget / total_categories) * 100
+    else:
+        budget_adherence_score = 0
+
+    return render(request, 'budget/insights.html', {
+        'monthly_labels': monthly_labels,
+        'monthly_spending': monthly_spending,
+        'monthly_income': monthly_income,
+        'savings_rate': savings_rate,
+        'category_breakdown_labels': list(category_breakdown.keys()),
+        'category_breakdown_values': list(category_breakdown.values()),
+        'budget_adherence_score': budget_adherence_score,
+        'category_adherence': category_adherence,
+    })
+
+
+def logout_view(request):
+    logout(request)
+    return redirect('login')

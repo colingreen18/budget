@@ -81,7 +81,7 @@ DATABASES = {
         'NAME': 'colinhg$budget',
         'USER': 'colinhg',                    # your PythonAnywhere username
         'PASSWORD': 'dbadmin1',            # your MySQL password
-        'HOST': 'username.mysql.pythonanywhere-services.com',  # your host
+        'HOST': 'colinhg.mysql.pythonanywhere-services.com',  # your host
         'PORT': '3306',
     }
 }
@@ -121,6 +121,7 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 
 STATIC_URL = "/static/"
 
-LOGIN_REDIRECT_URL = '/'
-LOGOUT_REDIRECT_URL = '/login/'
+LOGIN_URL = '/login'
+LOGIN_REDIRECT_URL = '/'  # Where to redirect after successful login
+LOGOUT_REDIRECT_URL = '/login'
 

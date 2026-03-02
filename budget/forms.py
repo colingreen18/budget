@@ -40,7 +40,7 @@ class SignUpForm(forms.Form):
         if not cleaned_data.get('household_name') and not cleaned_data.get('invite_code'):
             raise forms.ValidationError("Provide either a new household name or a valid invite code.")
         return cleaned_data
-    
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         bootstrapify(self)
@@ -83,10 +83,10 @@ class TransactionForm(forms.ModelForm):
         if household:
             self.fields['category'].queryset = Category.objects.filter(
                 household=household, deleted_at__isnull=True
-            )
+            ).order_by('name')
             self.fields['store'].queryset = Store.objects.filter(
                 household=household, deleted_at__isnull=True
-            )
+            ).order_by('name')
 
         # Set default date to today if not already set
         if not self.initial.get('date'):
@@ -102,12 +102,11 @@ class TransactionFilterForm(forms.Form):
     end_date = forms.DateField(required=False, widget=forms.DateInput(attrs={'type': 'date'}))
 
     category = forms.ModelChoiceField(
-        queryset=Category.objects.none(),
+        queryset=Category.objects.none().order_by('name'),
         required=False
     )
-
     store = forms.ModelChoiceField(
-        queryset=Store.objects.none(),
+        queryset=Store.objects.none().order_by('name'),
         required=False
     )
 
@@ -154,5 +153,15 @@ class StoreForm(forms.ModelForm):
                 income_expense='EX',
                 deleted_at__isnull=True
             )
-        
+
         bootstrapify(self)
+
+class DateRangeForm(forms.Form):
+    start_date = forms.DateField(
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+        required=False
+    )
+    end_date = forms.DateField(
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+        required=False
+    )

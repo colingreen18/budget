@@ -1,0 +1,309 @@
+{% extends "budget/base.html" %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="mb-0">Financial Insights</h2>
+</div>
+
+<!-- Budget Adherence Score Card -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Budget Adherence Score</h5>
+            </div>
+            <div class="card-body text-center">
+                <h1 class="display-3 {% if budget_adherence_score >= 80 %}text-success{% elif budget_adherence_score >= 60 %}text-warning{% else %}text-danger{% endif %}">
+                    {{ budget_adherence_score|floatformat:0 }}%
+                </h1>
+                <p class="text-muted">
+                    You're staying within budget on {{ category_adherence|length }} categories this month
+                </p>
+                <div class="progress" style="height: 30px;">
+                    <div class="progress-bar {% if budget_adherence_score >= 80 %}bg-success{% elif budget_adherence_score >= 60 %}bg-warning{% else %}bg-danger{% endif %}" 
+                         role="progressbar" 
+                         style="width: {{ budget_adherence_score }}%;" 
+                         aria-valuenow="{{ budget_adherence_score }}" 
+                         aria-valuemin="0" 
+                         aria-valuemax="100">
+                        {{ budget_adherence_score|floatformat:0 }}%
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row 1: Spending Trend & Income vs Expenses -->
+<div class="row mb-4">
+    <div class="col-md-6 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">Spending Trend (Last 12 Months)</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="spendingTrendChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">Income vs Expenses (Last 12 Months)</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="incomeExpensesChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row 2: Category Breakdown & Savings Rate -->
+<div class="row mb-4">
+    <div class="col-md-6 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0">Expense Breakdown (This Month)</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="categoryPieChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Savings Rate (Last 12 Months)</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="savingsRateChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Category Budget Details -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0">Category Budget Details (This Month)</h5>
+            </div>
+            <div class="card-body">
+                {% for item in category_adherence %}
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <strong>{{ item.category }}</strong>
+                        <span class="{% if item.on_budget %}text-success{% else %}text-danger{% endif %}">
+                            ${{ item.spent|floatformat:2 }} / ${{ item.budget|floatformat:2 }}
+                            ({{ item.adherence|floatformat:0 }}%)
+                        </span>
+                    </div>
+                    <div class="progress" style="height: 25px;">
+                        <div class="progress-bar {% if item.adherence <= 100 %}bg-success{% elif item.adherence <= 110 %}bg-warning{% else %}bg-danger{% endif %}" 
+                             role="progressbar" 
+                             style="width: {% if item.adherence > 100 %}100{% else %}{{ item.adherence }}{% endif %}%;" 
+                             aria-valuenow="{{ item.adherence }}" 
+                             aria-valuemin="0" 
+                             aria-valuemax="100">
+                            {{ item.adherence|floatformat:0 }}%
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <p class="text-muted text-center">No budget data available for this month</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// 1. Spending Trend Chart
+const spendingCtx = document.getElementById('spendingTrendChart').getContext('2d');
+new Chart(spendingCtx, {
+    type: 'line',
+    data: {
+        labels: {{ monthly_labels|safe }},
+        datasets: [{
+            label: 'Monthly Spending',
+            data: {{ monthly_spending|safe }},
+            borderColor: 'rgba(255, 99, 132, 1)',
+            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+            tension: 0.4,
+            fill: true
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    callback: function(value) {
+                        return '$' + value.toLocaleString();
+                    }
+                }
+            }
+        },
+        plugins: {
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        return 'Spending: $' + context.parsed.y.toLocaleString();
+                    }
+                }
+            }
+        }
+    }
+});
+
+// 2. Income vs Expenses Chart
+const incomeExpensesCtx = document.getElementById('incomeExpensesChart').getContext('2d');
+new Chart(incomeExpensesCtx, {
+    type: 'line',
+    data: {
+        labels: {{ monthly_labels|safe }},
+        datasets: [
+            {
+                label: 'Income',
+                data: {{ monthly_income|safe }},
+                borderColor: 'rgba(75, 192, 192, 1)',
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                tension: 0.4,
+                fill: true
+            },
+            {
+                label: 'Expenses',
+                data: {{ monthly_spending|safe }},
+                borderColor: 'rgba(255, 99, 132, 1)',
+                backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                tension: 0.4,
+                fill: true
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    callback: function(value) {
+                        return '$' + value.toLocaleString();
+                    }
+                }
+            }
+        },
+        plugins: {
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        return context.dataset.label + ': $' + context.parsed.y.toLocaleString();
+                    }
+                }
+            }
+        }
+    }
+});
+
+// 3. Category Pie Chart
+const categoryCtx = document.getElementById('categoryPieChart').getContext('2d');
+new Chart(categoryCtx, {
+    type: 'pie',
+    data: {
+        labels: {{ category_breakdown_labels|safe }},
+        datasets: [{
+            data: {{ category_breakdown_values|safe }},
+            backgroundColor: [
+                'rgba(255, 99, 132, 0.8)',
+                'rgba(54, 162, 235, 0.8)',
+                'rgba(255, 206, 86, 0.8)',
+                'rgba(75, 192, 192, 0.8)',
+                'rgba(153, 102, 255, 0.8)',
+                'rgba(255, 159, 64, 0.8)',
+                'rgba(199, 199, 199, 0.8)',
+                'rgba(83, 102, 255, 0.8)',
+                'rgba(255, 99, 255, 0.8)',
+                'rgba(99, 255, 132, 0.8)'
+            ]
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                        const percentage = ((context.parsed / total) * 100).toFixed(1);
+                        return context.label + ': $' + context.parsed.toLocaleString() + ' (' + percentage + '%)';
+                    }
+                }
+            },
+            legend: {
+                position: 'right'
+            }
+        }
+    }
+});
+
+// 4. Savings Rate Chart
+const savingsCtx = document.getElementById('savingsRateChart').getContext('2d');
+new Chart(savingsCtx, {
+    type: 'bar',
+    data: {
+        labels: {{ monthly_labels|safe }},
+        datasets: [{
+            label: 'Savings Rate (%)',
+            data: {{ savings_rate|safe }},
+            backgroundColor: function(context) {
+                const value = context.parsed.y;
+                if (value >= 20) return 'rgba(75, 192, 192, 0.8)';
+                if (value >= 10) return 'rgba(255, 206, 86, 0.8)';
+                if (value >= 0) return 'rgba(255, 159, 64, 0.8)';
+                return 'rgba(255, 99, 132, 0.8)';
+            },
+            borderColor: function(context) {
+                const value = context.parsed.y;
+                if (value >= 20) return 'rgba(75, 192, 192, 1)';
+                if (value >= 10) return 'rgba(255, 206, 86, 1)';
+                if (value >= 0) return 'rgba(255, 159, 64, 1)';
+                return 'rgba(255, 99, 132, 1)';
+            },
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                ticks: {
+                    callback: function(value) {
+                        return value + '%';
+                    }
+                }
+            }
+        },
+        plugins: {
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        return 'Savings Rate: ' + context.parsed.y.toFixed(1) + '%';
+                    }
+                }
+            }
+        }
+    }
+});
+</script>
+
+{% endblock %}
