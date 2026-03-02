@@ -454,7 +454,7 @@ def transaction_update(request, pk):
 def transaction_delete(request, pk):
     # Only allow deleting transactions in the current user's household
     household = request.user.familymember.household
-    transaction = get_object_or_404(Transaction, pk=pk, category__household=household)
+    transaction = get_object_or_404(Transaction, pk=pk, member__household=household)
 
     if request.method == "POST":
         transaction.delete()
@@ -498,119 +498,215 @@ def profile(request):
 
 @login_required
 def insights(request):
+    from dateutil.relativedelta import relativedelta
     household = request.user.familymember.household
     today = timezone.now().date()
 
-    # Get the last 12 months of data
-    twelve_months_ago = today - timedelta(days=365)
-
-    # Monthly spending trend (last 12 months)
+    # --- Monthly chart data (last 12 months) ---
     monthly_spending = []
     monthly_income = []
     monthly_labels = []
     savings_rate = []
+    cumulative_savings = []
+    cumulative = 0
 
-    for i in range(12):
-        # Calculate month
-        month_date = today - timedelta(days=30 * i)
+    for i in range(11, -1, -1):  # oldest to newest
+        month_date = today.replace(day=1) - relativedelta(months=i)
         month_start = date(month_date.year, month_date.month, 1)
         month_end = date(month_date.year, month_date.month, monthrange(month_date.year, month_date.month)[1])
 
-        # Get transactions for this month
         month_transactions = Transaction.objects.filter(
             member__household=household,
             date__gte=month_start,
             date__lte=month_end
         ).select_related('category')
 
-        # Calculate income and expenses
         income = 0
         expenses = 0
         for trans in month_transactions:
             if trans.category.income_expense == 'IN':
-                income += trans.amount
+                income += float(trans.amount)
             else:
-                expenses += trans.amount
+                expenses += float(trans.amount)
 
-        # Calculate savings rate
-        if income > 0:
-            rate = ((income - expenses) / income) * 100
-        else:
-            rate = 0
+        rate = ((income - expenses) / income * 100) if income > 0 else 0
+        cumulative += income - expenses
 
-        monthly_spending.insert(0, float(expenses))
-        monthly_income.insert(0, float(income))
-        monthly_labels.insert(0, month_start.strftime('%b %Y'))
-        savings_rate.insert(0, float(rate))
+        monthly_spending.append(round(expenses, 2))
+        monthly_income.append(round(income, 2))
+        monthly_labels.append(month_start.strftime('%b %Y'))
+        savings_rate.append(round(rate, 2))
+        cumulative_savings.append(round(cumulative, 2))
 
-    # Category breakdown (current month)
-    month_start = date(today.year, today.month, 1)
-    month_end = date(today.year, today.month, monthrange(today.year, today.month)[1])
+    # --- Category budget details ---
+    detail_mode = request.GET.get('detail_mode', 'month')
+    selected_month = request.GET.get('selected_month', today.strftime('%Y-%m'))
 
-    category_breakdown = {}
-    category_transactions = Transaction.objects.filter(
-        member__household=household,
-        date__gte=month_start,
-        date__lte=month_end,
-        category__income_expense='EX'  # Only expenses for pie chart
-    ).select_related('category')
+    try:
+        selected_month_date = datetime.strptime(selected_month, '%Y-%m').date()
+    except ValueError:
+        selected_month_date = today.replace(day=1)
 
-    for trans in category_transactions:
-        if trans.category.name not in category_breakdown:
-            category_breakdown[trans.category.name] = 0
-        category_breakdown[trans.category.name] += float(trans.amount)
+    sel_year = selected_month_date.year
+    sel_month = selected_month_date.month
+    sel_month_start = date(sel_year, sel_month, 1)
+    sel_month_end = date(sel_year, sel_month, monthrange(sel_year, sel_month)[1])
 
-    # Budget adherence score (current month)
     categories = Category.objects.filter(
         household=household,
         is_active=True,
         deleted_at__isnull=True
-    )
+    ).order_by('name')
 
-    total_categories = 0
-    categories_on_budget = 0
-    category_adherence = []
+    def get_spending(cat, start, end):
+        return float(Transaction.objects.filter(
+            member__household=household,
+            category=cat,
+            date__gte=start,
+            date__lte=end
+        ).aggregate(total=Sum('amount'))['total'] or 0)
+
+    # Build list of months with actual transaction data
+    earliest_tx = Transaction.objects.filter(
+        member__household=household
+    ).order_by('date').first()
+
+    all_months = []        # all months from first tx to today (for remaining)
+    completed_months = []  # excludes current month (for average)
+
+    if earliest_tx:
+        cursor = earliest_tx.date.date().replace(day=1)
+        current_month_start = today.replace(day=1)
+        while cursor <= current_month_start:
+            all_months.append(cursor)
+            if cursor < current_month_start:
+                completed_months.append(cursor)
+            cursor += relativedelta(months=1)
+
+    # Month options: only months that have at least one transaction, newest first
+    months_with_data = Transaction.objects.filter(
+        member__household=household
+    ).dates('date', 'month', order='DESC')
+
+    month_options = [
+        {'value': m.strftime('%Y-%m'), 'label': m.strftime('%B %Y')}
+        for m in months_with_data
+    ]
+
+    # Ensure selected_month is valid; fall back to most recent
+    valid_values = [o['value'] for o in month_options]
+    if selected_month not in valid_values and month_options:
+        selected_month = month_options[0]['value']
+        selected_month_date = datetime.strptime(selected_month, '%Y-%m').date()
+        sel_year = selected_month_date.year
+        sel_month = selected_month_date.month
+        sel_month_start = date(sel_year, sel_month, 1)
+        sel_month_end = date(sel_year, sel_month, monthrange(sel_year, sel_month)[1])
+
+    income_categories = []
+    necessary_categories = []
+    discretionary_categories = []
+
+    avg_monthly_savings = None
+
+    if detail_mode == 'average' and completed_months:
+        # Calculate average monthly savings across all completed months
+        total_savings = 0
+        for m in completed_months:
+            m_end = date(m.year, m.month, monthrange(m.year, m.month)[1])
+            m_txs = Transaction.objects.filter(
+                member__household=household,
+                date__gte=m,
+                date__lte=m_end
+            ).select_related('category')
+            m_income = sum(float(t.amount) for t in m_txs if t.category.income_expense == 'IN')
+            m_expenses = sum(float(t.amount) for t in m_txs if t.category.income_expense != 'IN')
+            total_savings += m_income - m_expenses
+        avg_monthly_savings = round(total_savings / len(completed_months), 2)
 
     for cat in categories:
-        budget = Budget.get_budget_for_month(household, cat, today.year, today.month)
-        if budget and budget.monthly_amount > 0:
-            spent = Transaction.objects.filter(
-                member__household=household,
-                category=cat,
-                date__gte=month_start,
-                date__lte=month_end
-            ).aggregate(total=Sum('amount'))['total'] or 0
+        if detail_mode == 'month':
+            budget = Budget.get_budget_for_month(household, cat, sel_year, sel_month)
+            display_budget = float(budget.monthly_amount) if budget else 0
+            display_spent = get_spending(cat, sel_month_start, sel_month_end)
+            adherence = (display_spent / display_budget * 100) if display_budget > 0 else None
+            remaining = None
+            if display_budget == 0 and display_spent == 0:
+                continue
 
-            adherence_pct = (spent / budget.monthly_amount) * 100
-            category_adherence.append({
-                'category': cat.name,
-                'adherence': float(adherence_pct),
-                'budget': float(budget.monthly_amount),
-                'spent': float(spent),
-                'on_budget': spent <= budget.monthly_amount
-            })
+        elif detail_mode == 'average':
+            if not completed_months:
+                continue
+            total_budget = 0
+            total_spent = 0
+            for m in completed_months:
+                b = Budget.get_budget_for_month(household, cat, m.year, m.month)
+                total_budget += float(b.monthly_amount) if b else 0
+                m_end = date(m.year, m.month, monthrange(m.year, m.month)[1])
+                total_spent += get_spending(cat, m, m_end)
+            month_count = len(completed_months)
+            display_budget = round(total_budget / month_count, 2)
+            display_spent = round(total_spent / month_count, 2)
+            adherence = (display_spent / display_budget * 100) if display_budget > 0 else None
+            remaining = None
+            if display_budget == 0 and display_spent == 0:
+                continue
 
-            total_categories += 1
-            if spent <= budget.monthly_amount:
-                categories_on_budget += 1
+        elif detail_mode == 'remaining':
+            if not all_months:
+                continue
+            cumul = 0
+            for m in all_months:
+                b = Budget.get_budget_for_month(household, cat, m.year, m.month)
+                b_amt = float(b.monthly_amount) if b else 0
+                m_end = date(m.year, m.month, monthrange(m.year, m.month)[1])
+                cumul += b_amt - get_spending(cat, m, m_end)
+            display_budget = None
+            display_spent = None
+            adherence = None
+            remaining = round(cumul, 2)
+        else:
+            continue
 
-    # Calculate overall adherence score
-    if total_categories > 0:
-        budget_adherence_score = (categories_on_budget / total_categories) * 100
-    else:
-        budget_adherence_score = 0
+        entry = {
+            'category': cat.name,
+            'adherence': adherence,
+            'display_budget': display_budget,
+            'display_spent': display_spent,
+            'remaining': remaining,
+            'on_budget': (display_spent <= display_budget) if (display_budget and display_spent is not None) else None,
+        }
+
+        if cat.income_expense == 'IN':
+            income_categories.append(entry)
+        elif cat.necessity:
+            necessary_categories.append(entry)
+        else:
+            discretionary_categories.append(entry)
+
+    def sort_key(e):
+        if detail_mode == 'remaining':
+            return e['remaining'] if e['remaining'] is not None else 0
+        return e['adherence'] if e['adherence'] is not None else 0
+
+    income_categories.sort(key=sort_key, reverse=True)
+    necessary_categories.sort(key=sort_key, reverse=True)
+    discretionary_categories.sort(key=sort_key, reverse=True)
 
     return render(request, 'budget/insights.html', {
         'monthly_labels': monthly_labels,
         'monthly_spending': monthly_spending,
         'monthly_income': monthly_income,
         'savings_rate': savings_rate,
-        'category_breakdown_labels': list(category_breakdown.keys()),
-        'category_breakdown_values': list(category_breakdown.values()),
-        'budget_adherence_score': budget_adherence_score,
-        'category_adherence': category_adherence,
+        'cumulative_savings': cumulative_savings,
+        'income_categories': income_categories,
+        'necessary_categories': necessary_categories,
+        'discretionary_categories': discretionary_categories,
+        'detail_mode': detail_mode,
+        'selected_month': selected_month,
+        'month_options': month_options,
+        'avg_monthly_savings': avg_monthly_savings,
     })
-
 
 def logout_view(request):
     logout(request)

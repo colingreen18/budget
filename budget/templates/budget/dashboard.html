@@ -32,9 +32,9 @@
         <div class="row text-center">
             <div class="col-12">
                 <small class="text-muted">
-                    Income (${{ actual_income|floatformat:2 }}) - 
-                    Necessary (${{ actual_necessary_expenses|floatformat:2 }}) - 
-                    Unnecessary (${{ actual_unnecessary_expenses|floatformat:2 }}) = 
+                    Income (${{ actual_income|floatformat:2 }}) -
+                    Necessary (${{ actual_necessary_expenses|floatformat:2 }}) -
+                    Unnecessary (${{ actual_unnecessary_expenses|floatformat:2 }}) =
                     <strong class="{% if actual_net >= 0 %}text-success{% else %}text-danger{% endif %}">
                         ${{ actual_net|floatformat:2 }}
                     </strong>
@@ -60,9 +60,9 @@
             <tr>
                 <td>{{ t.date|date:"Y-m-d" }}</td>
                 <td>{{ t.category.name }}</td>
-                <td class="text-end {% if t.category.income_expense == 'EX' %}text-danger{% else %}text-success{% endif %}">
-                    {% if t.category.income_expense == 'EX' %}-{% endif %}
-                    {{ t.amount }}
+                <td class="text-end {% if t.category.income_expense == 'IN' or t.amount < 0 %}text-success{% else %}text-danger{% endif %}">
+                    {% if t.category.income_expense == 'EX' and t.amount >= 0 %}-{% endif %}
+                    {{ t.amount|stringformat:".2f"|cut:"-" }}
                 </td>
                 <td>
                     <!-- Edit Button -->

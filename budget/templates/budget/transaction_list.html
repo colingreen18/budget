@@ -87,9 +87,9 @@
               <td>{{ t.store.name|default:"—" }}</td>
               <td>{{ t.description }}</td>
               <td>{{ t.member.user.first_name }}</td>
-              <td class="text-end {% if t.category.income_expense == 'EX' %}text-danger{% else %}text-success{% endif %}">
-                  {% if t.category.income_expense == 'EX' %}-{% endif %}
-                  {{ t.amount }}
+              <td class="text-end {% if t.category.income_expense == 'IN' or t.amount < 0 %}text-success{% else %}text-danger{% endif %}">
+                    {% if t.category.income_expense == 'EX' and t.amount >= 0 %}-{% endif %}
+                    {{ t.amount|stringformat:".2f"|cut:"-" }}
               </td>
               <td>
                   <a href="{% url 'transaction_update' t.pk %}" class="btn btn-sm btn-outline-primary">
